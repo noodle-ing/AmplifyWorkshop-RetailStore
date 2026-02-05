@@ -1,26 +1,46 @@
-import './App.css';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { generateClient } from 'aws-amplify/data';
+// 1. Используем относительный путь и импортируем только тип
+import type { Schema } from '../amplify/data/resource'; 
 
-import '@aws-amplify/ui-react/styles.css';
-import { ThemeProvider } from '@aws-amplify/ui-react';
-import { Category, Recommended, Header, Footer, Product } from './components';
+// Генерируем клиент
+const client = generateClient<Schema>();
 
-function App() {
-  const baseURL = process.env.NODE_ENV === 'development' ? '/RetailStore' : '';
+export default function HomePage() {
+  // 2. Теперь используем Product вместо Todo и добавляем ['type']
+  const [products, setProducts] = useState<Schema['Product']['type'][]>([]);
+
+  async function listProducts() {
+    try {
+      // 3. Вызываем list() для модели Product
+      const { data } = await client.models.Product.list();
+      setProducts(data);
+    } catch (error) {
+      console.error("Ошибка при загрузке товаров:", error);
+    }
+  }
+
+  useEffect(() => {
+    listProducts();
+  }, []);
 
   return (
-    <ThemeProvider>
-        <Router basename={baseURL}>
-          <Header />
-          <Routes>
-            <Route path="/" element={<Recommended />} />
-            <Route path="/category/:name" element={<Category />} />
-            <Route path="/product/:id" element={<Product />} />
-          </Routes>
-          <Footer />
-        </Router>
-    </ThemeProvider>
+    <main style={{ padding: '20px' }}>
+      <h1>Магазин RetailStore 👋</h1>
+      
+      {products.length === 0 ? (
+        <p>Товаров пока нет. База данных пуста.</p>
+      ) : (
+        <ul>
+          {products.map((product) => (
+            <li key={product.id}>
+              <strong>{product.name}</strong> — ${product.price}
+              <br />
+              <small>{product.description}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
   );
 }
-
-export default App;
